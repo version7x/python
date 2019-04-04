@@ -19,7 +19,7 @@ def check_tcp(host, port):
     except Exception as e:
         sock.close()
         print(e)
-        print('TCP FAIL on port %', % (port))
+        print('TCP FAIL on port %s', % (port))
         sys.exit(2)
     else:
         sock.close()

@@ -119,7 +119,7 @@ owner   = args.owner
 
 logging.basicConfig(
     level    = logging.WARNING,
-    format   = "%(asctime)-10s %(levelname)s %(messages)",
+    format   = "%(asctime)-10s %(levelname)s %(message)",
     filename = '/tmp/registration.log'
 )
 

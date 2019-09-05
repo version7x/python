@@ -11,9 +11,9 @@ import time
 import sys
 
 environment = 'prod'
-orig_path = '/path/to/original/files/{}/dir'.format(environment)
-path1     = '/path/to/new/location/1/{}/dir'.format(environment)
-path2     = '/path/to/new/location/2/{}/dir'.format(environment)
+orig_path   = '/path/to/original/files/{}/dir'.format(environment)
+path1       = '/path/to/new/location/1/{}/dir'.format(environment)
+path2       = '/path/to/new/location/2/{}/dir'.format(environment)
 
 feed_list = ['dir1', 'dir2', 'dir3']
 

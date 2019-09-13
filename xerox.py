@@ -6,7 +6,7 @@ from os import listdir as ls
 from os import remove as rm
 from os.path import isfile
 import logging
-import isgnal
+import signal
 import time
 import sys
 

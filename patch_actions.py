@@ -18,7 +18,7 @@ def update_status(action, outcome, details=None):
     #    "outcome: {2}, details: {3}".format(tstamp, action, outcome, details))
     try:
         f      = open(status_file, 'w+')
-        f.write("{0}\t{1}\t{2}\t{3}".format(tstamp, action, outcome, details))
+        f.write("{}\t{}\t{}\t{}".format(tstamp, action, outcome, details))
     except Exception as e:
         f.close()
         #logger.warning("Failed to update status file.  Error - {0}.\n"
@@ -35,15 +35,14 @@ def check_status():
     '''
     #logger.debug("Attempting ot read status file")
     try:
-        f      =  open(status_file, 'r')
-        status = f.read()
+        with open(status_file, 'r') as f:
+            status = f.read()
         return status
     except FileNotFoundError:
         #logger.debug("Status file does not exist")
-        return 2, "File does not exist"
+        return 2, "Status file does not yet exist"
     except Exception as e:
         #logger.warning("Unknown filesystem error: {0}".format(e))
-        f.close()
         return 2, e
 
 def check_fs_size(partition, space):

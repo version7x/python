@@ -174,14 +174,20 @@ def parse():
 
 
 def main ():
+    # Declare global variables
     global host
     global args
+
+    # Get hostname
     host = uname()[1]
+
+    # Parse arguments
     args = parse()
 
+    # Initialize fail_message dictionary
     fail_message = {}
 
-    # Need to be root to run
+    # Need to be root to run (not atcually needed)
     verify_root()
 
     # Write status and exit without checks if force == True
@@ -223,6 +229,7 @@ def main ():
     if disk_status == 'fail':
         fail_message['disk'] = disk_fails
 
+    # Download packages for later install
     dp_fail, dp_err = download_packages()
     if dp_fail     == 'fail':
         fail_message['yum_download'] = dp_err

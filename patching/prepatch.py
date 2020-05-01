@@ -36,6 +36,10 @@ logger.addHandler(stream_handler)
 
 
 def clean_yum():
+    '''
+    Runs yum clean all command.
+    RETURNS: pass/fail and logs output
+    '''
     # package-cleanup -y --oldkernels --count=2
     # clean yum clean all
     clean = Popen('yum clean all', shell=True, stdout=PIPE, stderr=PIPE)
@@ -54,11 +58,16 @@ def clean_yum():
 
 
 def get_pkg_list():
+    '''
+    Gets list of packages marked for upgrade
+    RETURNS: list of packages marked for upgrade or fail, error message
+    '''
     exclude  = ('Load', 'base', 'updates', 'Update')
     cmd      = 'yum -q list updates'
     repo     = '--disablerepo=* --enablerepo=base --enablerepo=updates'
     extra    = '--nogpgcheck --skip-broken --exclude=mysql* --exclude=nrpe* --exclude=nagios*'
-    updates  = {}
+    
+    updates  = {}  # initiate empty dictionary
 
     pkgs     = Popen([cmd, repo, extra], shell=True, stdout=PIPE, stderr=PIPE)
     out, err = pkgs.communicate()
@@ -81,6 +90,10 @@ def get_pkg_list():
 
 
 def download_packages():
+    '''
+    Downloads packages for update phase.  Ensures working yum service
+    RETURNS: pass/fail, output of error message if exists
+    '''
     # yum update --downloadonly
     cmd      = 'yum -y update --downloadonly'
     repo     = '--disablerepo=* --enablerepo=base --enablerepo=updates'
@@ -102,6 +115,8 @@ def download_packages():
 def check_network(repo_host, port):
     '''
     checks and times tcp response time for specified server and port
+    REQUIRES:  hostname to check and port
+    PROVIDES:  return status of zero on success and exit with error code 2 on failure
     '''
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(5)  # Sets timeout for connecction to prevent hanging
@@ -121,6 +136,11 @@ def check_network(repo_host, port):
 
 
 def check_disks(fs_list):
+    '''
+    For partition and free space specified, return pass or fail if that partion has available space remaining
+    REQUIRES: dictionary of filesystems and minimum space
+    PROVIDES: Returns pass/failure status and list of failed devices
+    '''
     failures = {}
     for partition, mb in fs_list.iteritems():
         msg, size = check_fs_size(partition, mb)
@@ -136,6 +156,13 @@ def check_disks(fs_list):
     return fail, failures
 
 def parse():
+    '''
+    Parse command line arguments
+    - check only : runs checks but does not set status file
+    - force      : only sets status file.  Run this as a last resort if you need to skip prepatch
+    - silent     : no output on success.  only critical failure output
+    - fail       : used for testing.  updates status file with failure status
+    '''
     parser = ArgumentParser(description='Run a series of tests to ensure system is ready for patching.')
     parser.add_argument('-c', '--check_only', action='store_true', dest='check',  help='Run quick health check only')
     parser.add_argument('-f', '--force',      action='store_true', dest='force',  help='Force successful prepatch status.  Not advised')
@@ -153,6 +180,9 @@ def main ():
     args = parse()
 
     fail_message = {}
+
+    # Need to be root to run
+    verify_root()
 
     # Write status and exit without checks if force == True
     if args.force:
@@ -172,8 +202,6 @@ def main ():
     Pass/Fail Tests...
     These will exit immediately on fail
     '''
-    # Need to be root to run
-    verify_root()
 
     # Check connectivity to yum server
     # This will exit on failure
@@ -223,7 +251,7 @@ def main ():
             # clean_kernels won't append status as this is not a significant failure
             status, koutput = clean_kernels(kern_num)
             if status == 'pass':
-                logger.info('Kernels cleaned - Prepatch.  Trimmed down to {0} kernels'.format(kern_num))
+                logger.info('Kernels cleaned - Prepatch.  Trimmed down to {0}} kernels'.format(kern_num))
                 logger.info('Yum Output: {0}'.format(koutput))
             else:
                 logger.warning('Unable to clean kernels. Error: {0}'.format(koutput))

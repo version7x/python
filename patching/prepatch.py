@@ -258,7 +258,7 @@ def main ():
             # clean_kernels won't append status as this is not a significant failure
             status, koutput = clean_kernels(kern_num)
             if status == 'pass':
-                logger.info('Kernels cleaned - Prepatch.  Trimmed down to {0}} kernels'.format(kern_num))
+                logger.info('Kernels cleaned - Prepatch.  Trimmed down to {0} kernels'.format(kern_num))
                 logger.info('Yum Output: {0}'.format(koutput))
             else:
                 logger.warning('Unable to clean kernels. Error: {0}'.format(koutput))

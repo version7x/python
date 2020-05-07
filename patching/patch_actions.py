@@ -1,8 +1,10 @@
 #!/bin/env python
 
+from __future__ import print_function
+
+from datetime import datetime, timedelta
 from subprocess import Popen, PIPE
 from os import statvfs, getuid, uname
-from datetime import datetime
 from sys import exit
 import logging
 
@@ -48,7 +50,7 @@ def update_status(action, outcome, details=None):
     finally:
         f.close
         logger.info("Status file updated: {0} {1} {2}".format(action, outcome, tstamp))
-        return 0
+        return 0, 0
 
 def check_status():
     '''
@@ -61,13 +63,46 @@ def check_status():
     try:
         with open(status_file, 'r') as f:
             status = f.read()
-        return status
+        return status, None
     except FileNotFoundError:
         logger.exception("Status file does not exist")
         return 2, "Status file does not yet exist"
     except Exception as e:
         logger.exception("Unknown filesystem error: {0}".format(e))
         return 2, e
+
+def verify_status(silent):
+    '''
+    Gets contents of status file from check_status()
+    Parses the fields
+    Field 1: Time stamp... determines if time is within one day
+    Field 2: Stage - prepatch, patch, postpatch
+    Field 3: Result - failed, success, etc
+    Field 4: (optional) - error output
+    RETURNS: stage, result, details, timestamp, then
+    '''
+    sout, serr = check_status()
+    if sout == 2:
+        logger.warning('Unable to read status file.  {0}'.format(serr))
+        if not silent:
+            print('Unable to read status file.  {0}'.format(serr))
+        exit(11)
+        sout = str(sout)
+
+    data       = sout.split()
+    now        = datetime.now()                                # Get current time
+    then       = now - timedelta(days=1)                       # Get difference between now and 24 hours ago
+    t          = data[0:2]                                     # Return first 2 elements
+    ts         = ("{0} {1}".format(t[0], t[1]))                # Create string from day and time
+    timestamp  = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S.%f") # Convert to datetime
+    stage      = data[2]
+    result     = data[3]
+    details    = ' '.join(data[4::])
+    #details   = data[4::]
+    # Old version commented out... current version triggers stack trace if called
+    # BUG
+
+    return stage, result, details, timestamp, then
 
 def check_fs_size(partition, space):
     '''
@@ -92,6 +127,8 @@ def get_kernel_count():
     '''
     output = Popen('rpm -qa --qf "%{NAME}\n" |grep -w "kernel"|grep -v "-"|wc -l', shell=True, stdout=PIPE, stderr=PIPE)
     count, err = output.communicate()
+    if err:
+        logger.warning('Recieved Error when getting kernel count: {0}'.format(err))
     return count.strip()
     
 def clean_kernels(num):
@@ -115,7 +152,9 @@ def clean_kernels(num):
         return ck_fail, ck_out
 
 def verify_root(test=False):
-        # Verify user is root
+        '''
+        Verifies the user is root.  If not exits with status 2
+        '''
         if getuid() != 0:
             logger.critical("Attempted to run as non-root user")
             print('You must be root to run this script')

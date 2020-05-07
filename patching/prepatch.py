@@ -2,7 +2,8 @@
 
 from __future__ import print_function
 
-from patch_actions import update_status, check_fs_size, clean_kernels, verify_root, get_kernel_count
+from patch_actions import update_status, check_fs_size, clean_kernels
+from patch_actions import verify_root, get_kernel_count
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE
 from datetime import datetime
@@ -13,9 +14,10 @@ import socket
 
 
 # Dictionary of filesystems to check along with size in MB
-# Consider putting fs_list and net_host in config file
-fs_list  = { '/var': 500, '/var/log': 100, '/': 1000, '/boot': 60}
-kern_num = 2
+fs_list      = { '/var': 500, '/var/log': 100, '/': 1000, '/boot': 60}
+kern_num     = 2
+check_server = 'kickstart'
+check_port   = 80
 
 # Set up logging
 logger       = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ def clean_yum():
         logger.critical('Unable to clean yum cache. Error: {0}'.format(err))
         update_status('yum_clean', yc_fail, err)
         if not args.silent:
-           print('[{}] Prepatch: failure - unable to clean cache'.format(host))
+           print('[{0}] Prepatch: failure - unable to clean cache'.format(host))
         exit(2)
     else:
         yc_fail = 'pass'
@@ -63,13 +65,13 @@ def get_pkg_list():
     RETURNS: list of packages marked for upgrade or fail, error message
     '''
     exclude  = ('Load', 'base', 'updates', 'Update')
-    cmd      = 'yum -q list updates'
-    repo     = '--disablerepo=* --enablerepo=base --enablerepo=updates'
+    yum      = 'yum -q list updates '
+    repo     = '--disablerepo=* --enablerepo=base --enablerepo=updates '
     extra    = '--nogpgcheck --skip-broken --exclude=mysql* --exclude=nrpe* --exclude=nagios*'
-    
+    cmd      = yum + repo + extra
     updates  = {}  # initiate empty dictionary
 
-    pkgs     = Popen([cmd, repo, extra], shell=True, stdout=PIPE, stderr=PIPE)
+    pkgs     = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
     out, err = pkgs.communicate()
 
     if pkgs.returncode != 0:
@@ -95,21 +97,22 @@ def download_packages():
     RETURNS: pass/fail, output of error message if exists
     '''
     # yum update --downloadonly
-    cmd      = 'yum -y update --downloadonly'
-    repo     = '--disablerepo=* --enablerepo=base --enablerepo=updates'
-    extra    = '--nogpgcheck --skip-broken --exclude=mysql* --exclude=nrpe* --exclude=nagios*'
-    download = Popen([cmd, repo, extra], shell=True, stdout=PIPE, stderr=PIPE)
+    update         = 'yum -y -q update --downloadonly '
+    repo           = '--disablerepo=* --enablerepo=base --enablerepo=updates '
+    extra          = '--nogpgcheck --skip-broken --exclude=mysql* --exclude=nrpe* --exclude=nagios*'
+    cmd            = update + repo + extra
+    download       = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
     dp_out, dp_err = download.communicate()
     
     if download.returncode != 0:
         dl_fail = 'fail'
-        logger.warning('Unable to download updates. Error: {0}'.format(dp_err))
-        return dl_fail, dp_err
+        logger.warning('Unable to download updates. \n \tError: {0}'.format(dp_err))
+        dl_fail, dl_error
     else:
         dl_fail = 'pass'
         logger.info('Packages successfully downloaded and staged for update')
-        logger.info('Yum Output: {0}'.format(dp_out))
-        return dl_fail, dp_err
+        logger.debug('Yum Output: {0}'.format(dp_out))
+        return dl_fail, None
     
 
 def check_network(repo_host, port):
@@ -125,9 +128,10 @@ def check_network(repo_host, port):
         sock.connect((repo_host, int(port)))
     except Exception as e:
         sock.close()
-        print(e)
         logger.critical('TCP FAIL to host {0} on port {1}'.format(repo_host, port))
-        exit(2)
+        logger.exception('Connectivity check fail')
+        print('[{0}] Network check failed to {1}'.format(host, e))
+        exit(3)
     else:
         sock.close()
         logger.info('TCP OK - {0}'.format(repo_host))
@@ -211,7 +215,7 @@ def main ():
 
     # Check connectivity to yum server
     # This will exit on failure
-    check_network('kickstart', 80)
+    check_network(check_server, check_port)
 
             
     #Clean yum
@@ -235,6 +239,7 @@ def main ():
         fail_message['yum_download'] = dp_err
 
     # write list of pending updates to tmp file
+    # /tmp/update_list-YYYY-MM.txt
     pkg_list = get_pkg_list()
     if 'fail' in pkg_list.keys():
         logger.warning('Error returning update list. {0}'.format(pkg_list['fail']))
@@ -268,7 +273,7 @@ def main ():
         logger.info('Running in check only mode.  Completed')
         logger.info(fail_message)
         if not args.silent:
-           print('Check only mode failures: \n{0}'.format(fail_message))
+           print('[{0}] Check only mode failures: \n{1}'.format(host, fail_message))
     elif fail_message:
         update_status('prepatch', 'failed', fail_message)
         if not args.silent:
@@ -277,8 +282,9 @@ def main ():
         update_status('prepatch', 'success')
         if not args.silent:
             print('[{0}] Prepatch - completed: success'.format(host))
+        
+        exit(0)
     
-
 
 if __name__ == '__main__':
     main()

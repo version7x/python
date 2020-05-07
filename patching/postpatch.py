@@ -50,10 +50,8 @@ def get_status_details():
         logger.warning("Patch out of date.  Re-run Patch")
         return 'Patch out of date.  Re-run patching'
 
-    # Checks to see if prepatch was a success
-    #   or if we made it to patching but failed
-    # Should rule out prepatch failures, patching success,
-    #   and all postpatch  
+    # Checks to see if patching was a success
+    #   or if we made it to patching but failed 
     if stage == 'patch'  and result == 'success':
         logger.info('Successful patch verified. Continuing.')
         return 0
@@ -78,7 +76,7 @@ def cleanup(kern_num):
     '''
     status, koutput = clean_kernels(kern_num)
     if status == 'pass':
-        logger.info('Kernels cleaned - Prepatch.  Trimmed down to {0} kernels'.format(kern_num))
+        logger.info('Kernels cleaned - Postpatch.  Trimmed down to {0} kernels'.format(kern_num))
         logger.info('Yum Output: {0}'.format(koutput))
         return 0
     else:

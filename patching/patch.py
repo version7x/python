@@ -271,7 +271,7 @@ def main():
         wall = False
     # Are we doning a reboot now?
     if reboot == True:
-        restart('All patches applied.  Rebooting as part of patch process in {0} seconds.'.format(delay), delay, wall)
+        restart('All patches applied.  Rebooting as part of patch process in {0} seconds.'.format(delay, delay, wall))
     else:
         message = 'All patches applied.  No-reboot specified'
         logger.info(message)

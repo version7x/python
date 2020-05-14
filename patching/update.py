@@ -69,7 +69,7 @@ def parse():
     parser.add_argument('-F', '--fail',        action='store_true',  dest='fail',    help='Show failure status for testing')
     parser.add_argument('-s', '--silent',      action='store_true',  dest='silent',  help='Silent - repress output')
     parser.add_argument('-V', '--verify',      action='store_true',  dest='verify',  help='Verify patching status after patching has been attempted')
-    parser.add_argument('-n', '--nodelay',     action='store_true',  dest='nodelay', help='Delay reboot by X seconds')
+    parser.add_argument('-n', '--nodelay',     action='store_true',  dest='nodelay', help='Do not delay reboot by default 300 seconds')
     parser.add_argument('-R', '--noreboot',    action='store_false', dest='reboot',  help='Stop auto reboot after patching.')
     #parser.add_argument('-c', '--check_only', action='store_true',  dest='check',   help='Run quick health check only')
     

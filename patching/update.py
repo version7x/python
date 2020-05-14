@@ -18,6 +18,7 @@ EXIT CODE MAP
 10 == 'Actions   - Unable to preform yum clean'
 11 == 'Prepatch  - Unable to contact yum service'
 12 == 'Prepatch  - test (failure requested)'
+13 == 'Prepatch  - Various errors -disk, yum repo, kernel count'
 20 == 'Patching  - Prepatch not completed successfully'
 21 == 'Patching  - Prepatch not preformed recently'
 22 == 'Patching  - Unable to read redhat-release file'
@@ -88,7 +89,7 @@ def code_mapper(code):
     elif code == 12:
         msg   = 'Prepatch  - test (failure requested)'
     elif code == 13:
-        msg   = 'Non-critical precheck validation error. See logs'
+        msg   = 'Non-critical precheck validation error (disk, yum repo, kernel count). See logs'
     elif code == 20:
         msg   = 'Patching  - Prepatch not completed successfully'
     elif code == 21:

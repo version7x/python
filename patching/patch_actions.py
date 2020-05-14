@@ -86,7 +86,7 @@ def verify_status(silent):
         logger.warning('Unable to read status file.  {0}'.format(serr))
         if not silent:
             print('Unable to read status file.  {0}'.format(serr))
-        exit(11)
+        exit(1)
         sout = str(sout)
 
     data       = sout.split()

@@ -52,7 +52,7 @@ def clean_yum():
         update_status('yum_clean', yc_fail, err)
         if not args.silent:
            print('[{0}] Prepatch: failure - unable to clean cache'.format(host))
-        exit(2)
+        exit(10)
     else:
         yc_fail = 'pass'
         logger.info('Yum cache cleaned successfully')
@@ -107,7 +107,7 @@ def download_packages():
     if download.returncode != 0:
         dl_fail = 'fail'
         logger.warning('Unable to download updates. \n \tError: {0}'.format(dp_err))
-        dl_fail, dl_error
+        dl_fail, dp_err
     else:
         dl_fail = 'pass'
         logger.info('Packages successfully downloaded and staged for update')
@@ -131,7 +131,7 @@ def check_network(repo_host, port):
         logger.critical('TCP FAIL to host {0} on port {1}'.format(repo_host, port))
         logger.exception('Connectivity check fail')
         print('[{0}] Network check failed to {1}'.format(host, e))
-        exit(3)
+        exit(11)
     else:
         sock.close()
         logger.info('TCP OK - {0}'.format(repo_host))
@@ -170,10 +170,10 @@ def parse():
     parser = ArgumentParser(description='Run a series of tests to ensure system is ready for patching.')
     parser.add_argument('-c', '--check_only', action='store_true', dest='check',  help='Run quick health check only')
     parser.add_argument('-f', '--force',      action='store_true', dest='force',  help='Force successful prepatch status.  Not advised')
-    parser.add_argument('-a', '--autopatch',  action='store_true', dest='auto',   help='Flag used for automation')
     parser.add_argument('-s', '--silent',     action='store_true', dest='silent', help='Silent mode.  No output to terminal')
     parser.add_argument('-F', '--fail',       action='store_true', dest='fail',   help='Show failure status for testing')
-
+    #parser.add_argument('-a', '--autopatch', action='store_true', dest='auto',   help='Flag used for automation')
+    
     return parser.parse_args()
 
 
@@ -204,7 +204,7 @@ def main ():
     if args.fail:
         update_status('prepatch', 'failure', 'Failure via flag: testing')
         print('[{0}] Prepatch - completed: failure'.format(host))
-        exit(1)
+        exit(12)
 
 
 
@@ -274,10 +274,12 @@ def main ():
         logger.info(fail_message)
         if not args.silent:
            print('[{0}] Check only mode failures: \n{1}'.format(host, fail_message))
+        exit(0)
     elif fail_message:
         update_status('prepatch', 'failed', fail_message)
         if not args.silent:
            print('[{0}] Prepatch - failed: {1}'.format(host, fail_message))
+        exit(13)
     else:
         update_status('prepatch', 'success')
         if not args.silent:

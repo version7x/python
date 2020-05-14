@@ -50,8 +50,8 @@ def get_status_details():
         logger.warning("Patch out of date.  Re-run Patch")
         return 'Patch out of date.  Re-run patching'
 
-    # Checks to see if patching was a success
-    #   or if we made it to patching but failed 
+
+    #   Verifies patching was sucessful before continuing 
     if stage == 'patch'  and result == 'success':
         logger.info('Successful patch verified. Continuing.')
         return 0
@@ -166,7 +166,7 @@ def main():
     if a != 0:
         logger.warning('Patching process completed with errors')
         print('[{0}] postpatch failed'.format(host))
-        exit(52)
+        exit(30)
 
     # Trims kernel down to kern_num as specified
     b = cleanup(kern_num)
@@ -187,18 +187,13 @@ def main():
         final_status('failed', failures)
         if not silent:
             print('[{0}] Patching complete, but minor errors occured during postpatch: {1}'.format(host, failures))
-        exit(53) 
+        exit(31) 
     else:
         logger.info('Postpatch - complete: successful')
         update_status('patching', 'complete')
         if not silent:
             print('[{0}] Patching Success'.format(host))
         exit(0)
-
-    
-
-
-
 
 if __name__ == '__main__':
     main()

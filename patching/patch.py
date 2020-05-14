@@ -102,7 +102,7 @@ def parse():
     - wall        : display reboot warning to all logged in users
     '''
     parser = ArgumentParser(description='Updates all packages on system based on flags selected')
-    parser.add_argument('-n', '--nodelay',     action='store_true',  dest='nodelay',    help='Delay reboot by X seconds')
+    parser.add_argument('-n', '--nodelay',     action='store_true',  dest='nodelay',    help='Do not delay reboot by default 300 seconds')
     parser.add_argument('-K', '--kernelonly',  action='store_true',  dest='kernel',     help='Update kernel only')
     parser.add_argument('-k', '--kernelfirst', action='store_true',  dest='first',      help='Run update twice. First time for kernel only')
     parser.add_argument('-R', '--noreboot',    action='store_false', dest='reboot',     help='Stop auto reboot after patching.')

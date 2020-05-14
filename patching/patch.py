@@ -7,10 +7,11 @@ from patch_actions import verify_root, verify_status
 from subprocess import Popen, PIPE
 from datetime import datetime, timedelta
 from argparse import ArgumentParser
-from time import sleep
 from os import system, uname, chmod
+from time import sleep
+from sys import exit
 import logging
-import sys
+
 
 cron_file  = '/etc/rc.d/rc.local'
 script_dir = '/usr/local/bin/patching/'
@@ -59,7 +60,7 @@ def update(flag=None):
         update_status('patch', 'failed', err)
         if not silent:
             print('[{0}] Patching failed: {1}'.format(host, err))
-        sys.exit(14)
+        exit(25)
     else:
         logger.info('Patches applied succssfully.  Output: {0}'.format(out))
         update_status('patch', 'success')
@@ -102,8 +103,8 @@ def parse():
     '''
     parser = ArgumentParser(description='Updates all packages on system based on flags selected')
     parser.add_argument('-n', '--nodelay',     action='store_true',  dest='nodelay',    help='Delay reboot by X seconds')
-    parser.add_argument('-k', '--kernelonly',  action='store_true',  dest='kernel',     help='Update kernel only')
-    parser.add_argument('-f', '--kernelfirst', action='store_true',  dest='first',      help='Run update twice. First time for kernel only')
+    parser.add_argument('-K', '--kernelonly',  action='store_true',  dest='kernel',     help='Update kernel only')
+    parser.add_argument('-k', '--kernelfirst', action='store_true',  dest='first',      help='Run update twice. First time for kernel only')
     parser.add_argument('-R', '--noreboot',    action='store_false', dest='reboot',     help='Stop auto reboot after patching.')
     parser.add_argument('-a', '--autopatch',   action='store_true',  dest='auto_patch', help='Flag used for framework')
     parser.add_argument('-s', '--silent',      action='store_true',  dest='silent',     help='Silent - repress output')
@@ -126,7 +127,7 @@ def get_status_details():
         logger.warning(message)
         if not silent:
             print('[{0}] {1}'.format(host, message))
-        sys.exit(12)
+        exit(21)
     # Checks to see if prepatch was a success
     # or if we made it to patching but failed
     # Should rule out prepatch failures, patching success, and all postpatch
@@ -145,7 +146,7 @@ def get_status_details():
         logger.warning(stage, result, details)
         if not silent:
            print('[{0}] {1}'.format(host, message))
-        sys.exit(13)
+        exit(20)
 
 def set_cron():
     # postpatch >> /etc/rc.d/rc.local
@@ -176,11 +177,12 @@ def set_systemd():
     output, error = os.communicate()
     if os.returncode != 0:
         logger.critical('Error getting OS version: {0}'.format(error))
-        return 15
+        return 22
 
     if output.lower().startswith('centos-release-6'):
         logger.info('Determined system to be Centos/Redhat version 6')
         return 0
+        
     elif output.lower().startswith('centos-release-7'):
         logger.info('Determined system to be Centos/Redhat version 7')
         chmod(cron_file, 0755)
@@ -188,13 +190,13 @@ def set_systemd():
         e_out, e_err = enable.communicate()
         if enable.returncode != 0:
             logger.critical('Unable to enable rc.local service.  {0} Error: {1}'.format(e_out, e_err))
-            return 16
+            return 23
         else:
             logger.info('rc.local good to go')
             return 0
     else:
         logger.critical('Unexpected CentOS variant: {0}'.format(output))
-        exit(16)
+        exit(24)
 
 
 
@@ -203,6 +205,7 @@ def set_systemd():
 def verify_kernel():
     # uname -r
     # didn't have time to implement
+    # using yum return code
     pass
 
 

@@ -5,7 +5,8 @@ from __future__ import print_function
 from patch_actions import verify_status
 from argparse import ArgumentParser
 from subprocess import Popen, PIPE
-from os import uname
+from os import uname, system
+from time import sleep
 from sys import exit
 import logging
 
@@ -66,11 +67,12 @@ def parse():
     parser.add_argument('-w', '--wall',        action='store_true',  dest='wall',    help='Send warning message to logged in users before reboot')
     parser.add_argument('-f', '--force',       action='store_true',  dest='force',   help='Force successful prepatch status.  Not advised')
     parser.add_argument('-F', '--fail',        action='store_true',  dest='fail',    help='Show failure status for testing')
-    parser.add_argument('-s', '--silent',     action='store_true',   dest='silent',  help='Silent - repress output')
+    parser.add_argument('-s', '--silent',      action='store_true',  dest='silent',  help='Silent - repress output')
     parser.add_argument('-V', '--verify',      action='store_true',  dest='verify',  help='Verify patching status after patching has been attempted')
+    parser.add_argument('-n', '--nodelay',     action='store_true',  dest='nodelay', help='Delay reboot by X seconds')
+    parser.add_argument('-R', '--noreboot',    action='store_false', dest='reboot',  help='Stop auto reboot after patching.')
     #parser.add_argument('-c', '--check_only', action='store_true',  dest='check',   help='Run quick health check only')
-    #parser.add_argument('-R', '--noreboot',   action='store_false', dest='reboot',  help='Stop auto reboot after patching.')
-    #parser.add_argument('-n', '--nodelay',    action='store_true',  dest='nodelay', help='Delay reboot by X seconds')
+    
 
     return parser.parse_args()
 
@@ -109,17 +111,31 @@ def code_mapper(code):
     return msg
 
 
-def run_stage(stage, *args):
-    cmd      = script_dir + stage + '.py' + ' ' + args
-    action   = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-    out, err = action.communicate()
+def run_stage(stage, args):
+    cmd       = script_dir + stage + '.py' + ' ' + args
+    action    = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+    out, err  = action.communicate()
 
     if action.returncode == 0:
         return 0, None
     else:
         if err:
-            logger.info('Function: run_stage ' + err)
+            logger.warning('Function: run_stage ' + err)
         return action.returncode, out
+
+def restart(message, delay, wall=False):
+    '''
+    Initates system reboot
+    REQURIRES: message to display to users, reboot delay, True/False value for console message
+    '''
+    # WALL MESSAGE
+    if wall:
+        system('/usr/bin/wall {0}'.format(message))
+    logger.info('Rebooting for patching')
+    # REBOOT NOW/DELAY
+    if delay:
+        sleep(delay)
+    system('/sbin/reboot now')
 
 
 def main():
@@ -131,9 +147,13 @@ def main():
     patch_fail  = 'Patching Failed'
     args        = parse()
 
+    if not args.silent:
+        silent = False
+        
+
     # Start with verify if called and then exit
     if args.verify:
-        stage, result, details, timestamp, then = verify_status()
+        stage, result, details, timestamp, then = verify_status(silent)
         if then > timestamp:
             message = 'Not run recently.  Re-Run update'
             logger.warning(message)
@@ -165,21 +185,28 @@ def main():
     if args.verbose:
         verbose = ''
     else:
-        verbose = '--silent'
+        verbose = '--silent '
     
     if args.force:
-        force = '--force'
+        force   = '--force '
     else:
-        force = ''
+        force   = ''
+    
+    if args.fail:
+        fail    = '--fail '
+    else:
+        fail    = ''
     
     # Prepatch Run
-    pre_string   = force + ' ' + verbose #+ ' ' + check
-    prepatch = script_dir +'prepatch.py ' + pre_string
+    pre         = force + ' ' + verbose + fail #+ ' ' + check 
+    pre_string  = ''.join(pre)
+    #prepatch   = script_dir +'prepatch.py ' + pre_string
 
-    pre_code     = run_stage(prepatch)
+    pre_code, status     = run_stage('prepatch', pre_string)
     if pre_code != 0:
         out = code_mapper(pre_code)
         logger.critical('{0} - {1}. Details: {2}'.format(pre_fail, pre_code, out))
+        logger.critical('Command Output: {0}'.format(status))
         if verbose:
             print('[{0}] {1} - {2}. Details: {3}'.format(host, pre_fail, pre_code, out))
         exit(pre_code)
@@ -187,35 +214,56 @@ def main():
 
     # Patch Run
     # Determine upgrade type
-    if args.kernelonly:
+    if args.kernel:
         kernel = '--kernelonly '
-    elif args.kernelfirst:
+    elif args.first:
         kernel = '--kernelfirst '
     else:
         kernel = ''
     
+    # Set Silent flag
+    if args.silent:
+        silent = True
+    # Reboot now vs default 300 seconds/5 min reboot
+    if args.nodelay:
+        delay  = None
+    else:
+        delay  = 300
+    # Set wall flag (reboot warning)
     if args.wall:
         wall   = '--wall '
     else:
         wall   = ''
-    
-    if args.silent:
-        silent = True
 
-    patch_string   = '--autopatch --noreboot --silent ' + kernel + verbose + wall
-    patch_code     = run_stage('patch', patch_string)
+    patch          = '--autopatch --noreboot --silent ' + kernel + verbose + wall
+    patch_string   = ''.join(patch)
+    patch_code, output = run_stage('patch' , patch_string)
     if patch_code != 0:
         out = code_mapper(patch_code)
-        logger.critical('{0} - {1}. Details: {2}'.format(patch_fail, patch_code, out))
+        logger.critical('[{0}] - {1}. Details: {2}'.format(patch_fail, patch_code, out))
+        logger.critical('Command output: {0}'.format(output))
         if verbose:
             print('[{0}] {1} - {2}. Details: {3}'.format(host, patch_fail, patch_code, out))
         exit(patch_code)
     else:
         if verbose:
-            print('[{0}] Patch Success. Details: {1}'.format(host, out))
+            print('[{0}] Patch Success.'.format(host))
         if not silent:
-            print('[{0}] Patch Success.  Rebooting')
-            
+            print('[{0}] Patch Success.  Rebooting'.format(host))
+
+    # Restart system
+    if args.reboot  == False:
+        reboot      = False
+    else:
+        reboot      = True
+    if reboot       == True:
+        restart('All patches applied.  Rebooting as part of patch process in {0} seconds.'.format(delay), delay, wall)
+    else:
+        message     = 'All patches applied.  No-reboot specified'
+        logger.info(message)
+        if not silent:
+            print('[{0}] Patch - successful: {1}'.format(host, message))
+  
 
 if __name__ == '__main__':
     main()

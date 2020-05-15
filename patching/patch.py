@@ -46,16 +46,16 @@ def update(flag=None):
     so         = '--setopt=protected_multilib=false '
 
     if flag    == 'kernel':
-        update = 'yum -y update kernel '
+        upcmd  = 'yum -y update kernel '
         er     = '--enablerepo=base '
     else:
-        update = 'yum -y update '
+        upcmd  = 'yum -y update '
         er     = '--enablerepo=base --enablerepo=updates --enablerepo=monthly '
 
-    cmd       = update + dr + er + ex + other + so
-    update     = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-    out, err   = update.communicate()
-    if update.returncode != 0:
+    cmd        = upcmd + dr + er + ex + other + so
+    yum_update = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+    out, err   = yum_update.communicate()
+    if yum_update.returncode != 0:
         logger.warning('Problem with update.  Message: {0} Error: {1}'.format(out, err))
         update_status('patch', 'failed', err)
         if not silent:

@@ -249,8 +249,8 @@ def main():
     else:
         if verbose:
             print('[{0}] Patch Success.'.format(host))
-        if not silent:
-            print('[{0}] Patch Success.  Rebooting'.format(host))
+        #if not silent:
+        #    print('[{0}] Patch Success.  Rebooting'.format(host))
 
     # Restart system
     if args.reboot  == False:

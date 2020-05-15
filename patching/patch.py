@@ -64,8 +64,6 @@ def update(flag=None):
     else:
         logger.info('Patches applied succssfully.  Output: {0}'.format(out))
         update_status('patch', 'success')
-        if not silent:
-            print('[{0}] Patching - success {1}'.format(host, err))
         return 0
 
 
